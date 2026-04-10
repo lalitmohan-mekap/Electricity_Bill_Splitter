@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ BillSplit — Divided Slab Method</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050508;
+    --surface: rgba(17, 17, 24, 0.7);
+    --card: rgba(22, 22, 31, 0.5);
+    --border: rgba(255,255,255,0.08);
+    --border-bright: rgba(255,220,60,0.4);
+    --yellow: #ffd93d;
+    --yellow-dim: rgba(255,217,61,0.15);
+    --yellow-glow: rgba(255,217,61,0.25);
+    --text: #f8f8f8;
+    --text-muted: #a0a0a0;
+    --text-dim: #666;
+    --green: #4ade80;
+    --red: #f87171;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 12px;
+    --radius-lg: 18px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(circle at 50% 0%, #151520 0%, var(--bg) 60%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Background Grid ── */
+  .bg-grid {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background-image: 
+      linear-gradient(to right, rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 60%);
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 60%);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+  /* ── Hero ── */
+  .hero {
+    position: relative;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 100px 24px 80px;
+    text-align: center;
+    animation: slideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--yellow-dim);
+    border: 1px solid var(--border-bright);
+    color: var(--yellow);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+    letter-spacing: 0.08em;
+  }
+
+  .hero-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--yellow);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero h1 {
+    font-family: var(--mono);
+    font-size: clamp(2.5rem, 6vw, 4.2rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+
+  .hero h1 span { 
+    color: var(--yellow);
+    text-shadow: 0 0 30px var(--yellow-glow);
+  }
+
+  .hero p {
+    font-size: 17px;
+    color: var(--text-muted);
+    max-width: 540px;
+    margin: 0 auto 40px;
+    font-weight: 300;
+    line-height: 1.7;
+  }
+
+  /* ── Concept cards ── */
+  .concept {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 860px;
+    margin: 0 auto 80px;
+    padding: 0 24px;
+    animation: fadeIn 1s 0.3s both;
+  }
+
+  .concept-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    text-align: left;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+
+  .concept-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  .concept-card .icon {
+    font-size: 26px;
+    margin-bottom: 16px;
+    display: inline-block;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.4));
+  }
+
+  .concept-card h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--yellow);
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+
+  .concept-card p {
+    font-size: 13.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  /* ── App container ── */
+  .app {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 100px;
+  }
+
+  /* ── Step indicator ── */
+  .steps {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 40px;
+    background: rgba(17, 17, 24, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  .step-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: none;
+    background: none;
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+
+  .step-btn .num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--surface);
+    font-family: var(--mono);
+    font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .step-btn.active {
+    background: var(--yellow-dim);
+    color: var(--yellow);
+  }
+  .step-btn.active .num { background: var(--yellow); color: var(--bg); }
+  .step-btn.done { color: var(--text-muted); }
+  .step-btn.done .num { background: #1a2e1a; color: var(--green); }
+
+  /* ── Panel ── */
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn 0.25s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ── Section heading ── */
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Input groups ── */
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .field-row.three { grid-template-columns: 2fr 1fr 1fr; }
+  .field-row.single { grid-template-columns: 1fr; }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .field input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 13px;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input:focus { border-color: var(--border-bright); }
+  .field input::placeholder { color: var(--text-dim); }
+
+  /* ── Slab / User item card ── */
+  .item-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 12px;
+    position: relative;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .item-card:hover {
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  .item-card .card-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--yellow);
+    margin-bottom: 12px;
+    letter-spacing: 0.06em;
+  }
+
+  .remove-btn {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    line-height: 1;
+  }
+
+  .remove-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Buttons ── */
+  .btn-row { display: flex; gap: 10px; margin-top: 16px; }
+
+  .btn {
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  .btn-ghost { background: var(--surface); color: var(--text-muted); }
+  .btn-ghost:hover { background: var(--card); color: var(--text); }
+
+  .btn-yellow {
+    background: var(--yellow);
+    color: var(--bg);
+    border-color: var(--yellow);
+    font-weight: 600;
+  }
+  .btn-yellow:hover { background: #ffe566; }
+
+  .btn-outline {
+    background: none;
+    color: var(--yellow);
+    border-color: var(--border-bright);
+  }
+  .btn-outline:hover { background: var(--yellow-dim); }
+
+  .btn-next {
+    margin-left: auto;
+    background: var(--yellow);
+    color: var(--bg);
+    border-color: var(--yellow);
+    font-weight: 600;
+    padding: 10px 24px;
+  }
+  .btn-next:hover { background: #ffe566; }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* ── Results ── */
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .result-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.3);
+  }
+
+  .result-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--yellow);
+    opacity: 0.5;
+  }
+
+  .result-card .rc-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .result-card .rc-units {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .result-card .rc-ec { font-size: 12px; color: var(--text-muted); margin: 2px 0; }
+
+  .result-card .rc-total {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--yellow);
+    margin-top: 10px;
+  }
+
+  /* ── User breakdown table ── */
+  .breakdown {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: border-color 0.2s ease;
+  }
+
+  .breakdown:hover {
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  .breakdown-header {
+    padding: 14px 20px;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+
+  .breakdown-header .bh-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--yellow);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .breakdown-header .bh-total {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .breakdown-header .chevron {
+    color: var(--text-dim);
+    transition: transform 0.2s;
+    margin-left: 10px;
+    font-size: 12px;
+  }
+
+  .breakdown-header.open .chevron { transform: rotate(180deg); }
+
+  .breakdown-body { display: none; }
+  .breakdown-body.open { display: block; }
+
+  .calc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .calc-table th {
+    background: #0e0e16;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .calc-table th.r, .calc-table td.r { text-align: right; }
+
+  .calc-table td {
+    padding: 11px 20px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+
+  .calc-table tr:last-child td { border-bottom: none; }
+
+  .calc-table .row-full td { color: var(--text-muted); }
+  .calc-table .row-partial td { color: var(--yellow); }
+  .calc-table .row-extra td { color: #f9a825; }
+  .calc-table .row-unused td { color: var(--text-dim); opacity: 0.5; }
+  .calc-table .row-subtotal td { background: var(--surface); color: var(--text-muted); border-top: 1px solid var(--border); }
+  .calc-table .row-fixed td { color: var(--text-muted); font-size: 12px; }
+  .calc-table .row-grand td { background: var(--yellow-dim); color: var(--yellow); font-weight: 700; font-size: 14px; border-top: 1px solid var(--border-bright); }
+
+  .tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    margin-left: 8px;
+    font-family: var(--sans);
+    letter-spacing: 0.02em;
+    vertical-align: middle;
+  }
+
+  .tag-stops { background: rgba(255,217,61,0.15); color: var(--yellow); border: 1px solid rgba(255,217,61,0.25); }
+  .tag-extra { background: rgba(249,168,37,0.12); color: #f9a825; border: 1px solid rgba(249,168,37,0.25); }
+  .tag-full  { background: rgba(74,222,128,0.08); color: #4ade80; border: 1px solid rgba(74,222,128,0.15); }
+
+  /* ── Master bill summary table ── */
+  .master-table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 32px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .master-table-wrap h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    text-transform: uppercase;
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  /* ── Summary table ── */
+  .summary-wrap {
+    background: var(--card);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-top: 32px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 0 30px rgba(255,217,61,0.05);
+  }
+
+  .summary-wrap h3 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    text-transform: uppercase;
+    padding: 14px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  /* ── Notice ── */
+  .notice {
+    background: rgba(255,217,61,0.06);
+    border: 1px solid rgba(255,217,61,0.18);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12.5px;
+    color: #c8a020;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .notice::before { content: '⚠'; flex-shrink: 0; }
+
+  /* ── Reset button ── */
+  #reset-btn {
+    display: block;
+    margin: 32px auto 0;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  #reset-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: var(--mono);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+
+  /* ── Responsiveness ── */
+  
+  /* Make tables scrollable laterally on small devices */
+  .master-table-wrap, .summary-wrap, .breakdown-body {
+    overflow-x: auto;
+  }
+  
+  /* Tablet / Smaller desktop */
+  @media (max-width: 1024px) {
+    .hero { padding: 80px 24px 60px; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
+    .concept { gap: 16px; margin-bottom: 60px; }
+    .result-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* Medium screens / Large Tablets */
+  @media (max-width: 768px) {
+    .concept { grid-template-columns: repeat(2, 1fr); }
+    .app { padding-bottom: 60px; }
+    .btn-row { flex-wrap: wrap; }
+    .btn { width: 100%; justify-content: center; }
+    .btn-next { margin-left: 0; }
+  }
+
+  /* Mobile devices */
+  @media (max-width: 640px) {
+    .hero { padding: 60px 20px 40px; }
+    .concept { grid-template-columns: 1fr; }
+    .result-grid { grid-template-columns: 1fr; }
+    .field-row, .field-row.three, .field-row.single { grid-template-columns: 1fr; }
+    .steps { flex-direction: column; gap: 4px; padding: 6px; }
+    .step-btn { justify-content: flex-start; padding: 12px; }
+    
+    .panel-title { font-size: 10px; }
+    .item-card { padding: 16px; }
+    .breakdown-header { flex-wrap: wrap; gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<!-- ── Hero ─────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-badge">DIVIDED SLAB METHOD</div>
+  <h1>Split your <span>electricity</span><br>bill fairly.</h1>
+  <p>One shared meter. Multiple users. Each person climbs their own slab ladder — paying the cheapest rate first, regardless of how much others consume.</p>
+</section>
+
+<!-- ── Concept cards ─────────────────────────────────────── -->
+<div class="concept">
+  <div class="concept-card">
+    <span class="icon">⚖️</span>
+    <h3>Divide slabs equally</h3>
+    <p>Each master slab's units are divided by the number of users, giving everyone an equal "share" per rate tier.</p>
+  </div>
+  <div class="concept-card">
+    <span class="icon">🪜</span>
+    <h3>Climb your own ladder</h3>
+    <p>Every user starts at the cheapest rate and progresses upward only based on their own consumption.</p>
+  </div>
+  <div class="concept-card">
+    <span class="icon">🔒</span>
+    <h3>Fixed charges split equally</h3>
+    <p>Meter rent, ED charges, and customer fees are shared equally — independent of how much each user consumed.</p>
+  </div>
+</div>
+
+<!-- ── App ───────────────────────────────────────────────── -->
+<div class="app">
+
+  <!-- Steps -->
+  <div class="steps">
+    <button class="step-btn active" id="step1-btn" onclick="goToStep(1)">
+      <span class="num">1</span> Master Bill
+    </button>
+    <button class="step-btn" id="step2-btn" onclick="goToStep(2)">
+      <span class="num">2</span> Users &amp; Units
+    </button>
+    <button class="step-btn" id="step3-btn" onclick="goToStep(3)">
+      <span class="num">3</span> Results
+    </button>
+  </div>
+
+  <!-- ── STEP 1 : Master Bill ── -->
+  <div class="panel active" id="panel-1">
+    <div class="panel-title">Energy Charge Slabs</div>
+    <div id="slabs-container"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="addSlab()">+ Add Slab</button>
+    </div>
+
+    <hr class="divider">
+    <div class="panel-title">Fixed Charges</div>
+    <div id="fixed-container"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="addFixed()">+ Add Fixed Charge</button>
+    </div>
+
+    <hr class="divider">
+    <div class="panel-title">Shared Meter</div>
+    <div class="item-card">
+      <div class="field-row single">
+        <div class="field">
+          <label>Number of Users</label>
+          <input type="number" id="num-users" value="3" min="2" max="20" placeholder="e.g. 3">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-next" onclick="goToStep(2)">Next: Add Users →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 2 : Users ── -->
+  <div class="panel" id="panel-2">
+    <div class="panel-title">User Details</div>
+    <div id="users-container"></div>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="addUser()">+ Add User</button>
+      <button class="btn btn-next" onclick="calculate()">Calculate Bills →</button>
+    </div>
+  </div>
+
+  <!-- ── STEP 3 : Results ── -->
+  <div class="panel" id="panel-3">
+    <div id="results-area"></div>
+    <button id="reset-btn" onclick="reset()">↺ START OVER</button>
+  </div>
+
+</div>
+
+<footer>⚡ BillSplit · Divided Slab Method · Fair for every user</footer>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────────
+let slabCount  = 0;
+let fixedCount = 0;
+let userCount  = 0;
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  // Default slabs from the example
+  const defaultSlabs = [
+    { units: 50,  rate: 2.90 },
+    { units: 150, rate: 4.70 },
+    { units: 200, rate: 5.70 },
+    { units: 115, rate: 6.10 },
+  ];
+  defaultSlabs.forEach(s => addSlab(s.units, s.rate));
+
+  const defaultFixed = [
+    { name: 'MFC / Customer Charge', amount: 120.00 },
+    { name: 'ED Charge',             amount: 107.66 },
+    { name: 'Meter Rent',            amount: 40.00  },
+  ];
+  defaultFixed.forEach(f => addFixed(f.name, f.amount));
+})();
+
+// ── Step navigation ───────────────────────────────────────────────────────────
+function goToStep(n) {
+  if (n === 2) syncUserCards();
+  document.querySelectorAll('.panel').forEach((p, i) => {
+    p.classList.toggle('active', i + 1 === n);
+  });
+  document.querySelectorAll('.step-btn').forEach((b, i) => {
+    b.classList.remove('active', 'done');
+    if (i + 1 === n)      b.classList.add('active');
+    else if (i + 1 < n)   b.classList.add('done');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Add / remove slabs ────────────────────────────────────────────────────────
+function addSlab(units = '', rate = '') {
+  slabCount++;
+  const id = slabCount;
+  const div = document.createElement('div');
+  div.className = 'item-card';
+  div.id = 'slab-' + id;
+  div.innerHTML = `
+    <div class="card-label">SLAB ${id}</div>
+    ${id > 1 ? `<button class="remove-btn" onclick="removeItem('slab-${id}')">×</button>` : ''}
+    <div class="field-row">
+      <div class="field">
+        <label>Units in this slab</label>
+        <input type="number" id="slab-units-${id}" value="${units}" min="1" placeholder="e.g. 50">
+      </div>
+      <div class="field">
+        <label>Rate (₹ per unit)</label>
+        <input type="number" id="slab-rate-${id}" value="${rate}" min="0" step="0.01" placeholder="e.g. 2.90">
+      </div>
+    </div>`;
+  document.getElementById('slabs-container').appendChild(div);
+}
+
+// ── Add / remove fixed charges ────────────────────────────────────────────────
+function addFixed(name = '', amount = '') {
+  fixedCount++;
+  const id = fixedCount;
+  const div = document.createElement('div');
+  div.className = 'item-card';
+  div.id = 'fixed-' + id;
+  div.innerHTML = `
+    <div class="card-label">FIXED CHARGE ${id}</div>
+    ${id > 1 ? `<button class="remove-btn" onclick="removeItem('fixed-${id}')">×</button>` : ''}
+    <div class="field-row">
+      <div class="field">
+        <label>Charge name</label>
+        <input type="text" id="fixed-name-${id}" value="${name}" placeholder="e.g. MFC / Customer Charge">
+      </div>
+      <div class="field">
+        <label>Amount (₹)</label>
+        <input type="number" id="fixed-amount-${id}" value="${amount}" min="0" step="0.01" placeholder="e.g. 120">
+      </div>
+    </div>`;
+  document.getElementById('fixed-container').appendChild(div);
+}
+
+// ── Sync user cards when entering step 2 ─────────────────────────────────────
+function syncUserCards() {
+  const numUsers = parseInt(document.getElementById('num-users').value) || 3;
+  const container = document.getElementById('users-container');
+  // Add cards up to numUsers
+  while (userCount < numUsers) addUser();
+  // Remove extra
+  while (userCount > numUsers) {
+    const last = document.getElementById('user-' + userCount);
+    if (last) last.remove();
+    userCount--;
+  }
+}
+
+function addUser(name = '', units = '') {
+  userCount++;
+  const id = userCount;
+  const div = document.createElement('div');
+  div.className = 'item-card';
+  div.id = 'user-' + id;
+  div.innerHTML = `
+    <div class="card-label">USER ${id}</div>
+    ${id > 2 ? `<button class="remove-btn" onclick="removeItem('user-${id}')">×</button>` : ''}
+    <div class="field-row">
+      <div class="field">
+        <label>User name</label>
+        <input type="text" id="user-name-${id}" value="${name}" placeholder="e.g. Lalit">
+      </div>
+      <div class="field">
+        <label>Units consumed</label>
+        <input type="number" id="user-units-${id}" value="${units}" min="0" step="0.1" placeholder="e.g. 230.6">
+      </div>
+    </div>`;
+  document.getElementById('users-container').appendChild(div);
+  // Sync num-users input
+  document.getElementById('num-users').value = userCount;
+}
+
+function removeItem(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// ── Compute bill for one user ─────────────────────────────────────────────────
+function computeUserBill(unitConsumed, slabs, numUsers) {
+  let remaining = unitConsumed;
+  const rows    = [];
+  const highest = slabs[slabs.length - 1].rate;
+
+  for (const s of slabs) {
+    const alloc = s.units / numUsers;
+    let used, status;
+
+    if (remaining <= 0) {
+      used = 0; status = 'unused';
+    } else if (remaining >= alloc) {
+      used = alloc; status = 'full'; remaining -= alloc;
+    } else {
+      used = remaining; status = 'partial'; remaining = 0;
+    }
+
+    rows.push({ label: s.label, alloc, used, rate: s.rate, amount: used * s.rate, status });
+  }
+
+  if (remaining > 0) {
+    rows.push({
+      label: 'Extra (above allocation)',
+      alloc: null, used: remaining,
+      rate: highest, amount: remaining * highest, status: 'extra'
+    });
+  }
+
+  return rows;
+}
+
+// ── Calculate all bills ───────────────────────────────────────────────────────
+function calculate() {
+  const numUsers = parseInt(document.getElementById('num-users').value) || 3;
+
+  // Collect slabs
+  const slabs = [];
+  document.querySelectorAll('#slabs-container .item-card').forEach((card, i) => {
+    const id    = card.id.split('-')[1];
+    const units = parseFloat(document.getElementById('slab-units-' + id)?.value) || 0;
+    const rate  = parseFloat(document.getElementById('slab-rate-' + id)?.value) || 0;
+    slabs.push({ label: 'Slab ' + (i + 1), units, rate });
+  });
+
+  // Collect fixed
+  let totalFixed = 0;
+  const fixedList = [];
+  document.querySelectorAll('#fixed-container .item-card').forEach(card => {
+    const id     = card.id.split('-')[1];
+    const name   = document.getElementById('fixed-name-' + id)?.value || '';
+    const amount = parseFloat(document.getElementById('fixed-amount-' + id)?.value) || 0;
+    fixedList.push({ name, amount });
+    totalFixed += amount;
+  });
+  const fixedEach = totalFixed / numUsers;
+
+  // Collect users
+  const users = [];
+  for (let i = 1; i <= userCount; i++) {
+    const card = document.getElementById('user-' + i);
+    if (!card) continue;
+    const name  = document.getElementById('user-name-' + i)?.value || ('User ' + i);
+    const units = parseFloat(document.getElementById('user-units-' + i)?.value) || 0;
+    users.push({ name, units });
+  }
+
+  // Validate
+  if (!slabs.length || !users.length) {
+    alert('Please fill in at least one slab and one user.');
+    return;
+  }
+
+  // Compute
+  const bills = users.map(u => {
+    const rows = computeUserBill(u.units, slabs, numUsers);
+    const ecTotal = rows.reduce((s, r) => s + r.amount, 0);
+    return { user: u, rows, ecTotal, fixedShare: fixedEach, grand: ecTotal + fixedEach };
+  });
+
+  // Render
+  renderResults(slabs, fixedList, totalFixed, bills, numUsers);
+  goToStep(3);
+}
+
+// ── Render results ────────────────────────────────────────────────────────────
+function renderResults(slabs, fixedList, totalFixed, bills, numUsers) {
+  const area = document.getElementById('results-area');
+  area.innerHTML = '';
+
+  const totalMasterEC   = slabs.reduce((s, sl) => s + sl.units * sl.rate, 0);
+  const masterTotal     = totalMasterEC + totalFixed;
+  const grandBillsTotal = bills.reduce((s, b) => s + b.grand, 0);
+  const diff            = grandBillsTotal - masterTotal;
+
+  // ── Summary cards
+  let cardsHTML = '<div class="panel-title">Bill per user</div><div class="result-grid">';
+  bills.forEach(b => {
+    cardsHTML += `
+      <div class="result-card">
+        <div class="rc-name">${b.user.name}</div>
+        <div class="rc-units">${b.user.units} units consumed</div>
+        <div class="rc-ec">Energy charge: ₹${b.ecTotal.toFixed(2)}</div>
+        <div class="rc-ec">Fixed (1/${numUsers}): ₹${b.fixedShare.toFixed(2)}</div>
+        <div class="rc-total">₹${b.grand.toFixed(2)}</div>
+      </div>`;
+  });
+  cardsHTML += '</div>';
+
+  // ── Master bill table
+  let masterHTML = `
+    <div class="master-table-wrap">
+      <h3>Master Bill Reference</h3>
+      <table class="calc-table">
+        <thead><tr>
+          <th>Charge</th>
+          <th class="r">Total Units</th>
+          <th class="r">Rate ₹</th>
+          <th class="r">Per User (÷${numUsers})</th>
+          <th class="r">Amount ₹</th>
+        </tr></thead>
+        <tbody>`;
+  slabs.forEach((s, i) => {
+    masterHTML += `<tr class="row-full">
+      <td>${s.label}</td>
+      <td class="r">${s.units.toFixed(2)}</td>
+      <td class="r">${s.rate.toFixed(2)}</td>
+      <td class="r">${(s.units / numUsers).toFixed(2)}</td>
+      <td class="r">${(s.units * s.rate).toFixed(2)}</td>
+    </tr>`;
+  });
+  masterHTML += `<tr class="row-subtotal">
+    <td>Energy Charge Subtotal</td><td class="r" colspan="3"></td>
+    <td class="r">${totalMasterEC.toFixed(2)}</td></tr>`;
+  fixedList.forEach(f => {
+    masterHTML += `<tr class="row-fixed">
+      <td>${f.name} (split equally)</td>
+      <td class="r">—</td><td class="r">—</td>
+      <td class="r">₹${(f.amount / numUsers).toFixed(2)} each</td>
+      <td class="r">${f.amount.toFixed(2)}</td></tr>`;
+  });
+  masterHTML += `<tr class="row-grand">
+    <td>Master Bill Total</td><td class="r" colspan="3"></td>
+    <td class="r">₹${masterTotal.toFixed(2)}</td></tr>
+  </tbody></table></div>`;
+
+  // ── Individual breakdowns
+  let breakHTML = '<div class="panel-title">Detailed Slab Calculation</div>';
+  bills.forEach((b, bi) => {
+    breakHTML += `
+      <div class="breakdown">
+        <div class="breakdown-header" onclick="toggleBreakdown(${bi})">
+          <div class="bh-name">
+            <span>${b.user.name}</span>
+            <span style="font-weight:400;color:var(--text-muted);font-size:11px">${b.user.units} units</span>
+          </div>
+          <div style="display:flex;align-items:center">
+            <div class="bh-total">₹${b.grand.toFixed(2)}</div>
+            <span class="chevron">▼</span>
+          </div>
+        </div>
+        <div class="breakdown-body open" id="break-${bi}">
+          <table class="calc-table">
+            <thead><tr>
+              <th>Slab</th>
+              <th class="r">Allocated (÷${numUsers})</th>
+              <th class="r">Units Used</th>
+              <th class="r">Rate ₹</th>
+              <th class="r">Amount ₹</th>
+            </tr></thead>
+            <tbody>`;
+    b.rows.forEach(row => {
+      const rowClass = 'row-' + row.status;
+      const allocStr = row.alloc === null ? '—' : row.alloc.toFixed(2);
+      let tag = '';
+      if (row.status === 'partial') tag = '<span class="tag tag-stops">stops here</span>';
+      if (row.status === 'extra')   tag = '<span class="tag tag-extra">above alloc.</span>';
+      if (row.status === 'full')    tag = '<span class="tag tag-full">full</span>';
+      breakHTML += `<tr class="${rowClass}">
+        <td>${row.label}${tag}</td>
+        <td class="r">${allocStr}</td>
+        <td class="r">${row.used.toFixed(2)}</td>
+        <td class="r">${row.rate.toFixed(2)}</td>
+        <td class="r">${row.amount.toFixed(2)}</td>
+      </tr>`;
+    });
+    breakHTML += `
+      <tr class="row-subtotal"><td>Energy Charge Total</td><td class="r" colspan="3"></td><td class="r">${b.ecTotal.toFixed(2)}</td></tr>
+      <tr class="row-fixed"><td>Fixed Charges (1/${numUsers} of ₹${(b.fixedShare * numUsers).toFixed(2)})</td><td class="r" colspan="3"></td><td class="r">${b.fixedShare.toFixed(2)}</td></tr>
+      <tr class="row-grand"><td>Total Bill — ${b.user.name}</td><td class="r" colspan="3"></td><td class="r">₹${b.grand.toFixed(2)}</td></tr>
+    </tbody></table></div></div>`;
+  });
+
+  // ── Final summary
+  let summaryHTML = `
+    <div class="summary-wrap">
+      <h3>Final Summary</h3>
+      <table class="calc-table">
+        <thead><tr>
+          <th>User</th><th class="r">Units</th>
+          <th class="r">Energy ₹</th><th class="r">Fixed ₹</th><th class="r">Total ₹</th>
+        </tr></thead>
+        <tbody>`;
+  bills.forEach(b => {
+    summaryHTML += `<tr class="row-full">
+      <td>${b.user.name}</td>
+      <td class="r">${b.user.units}</td>
+      <td class="r">${b.ecTotal.toFixed(2)}</td>
+      <td class="r">${b.fixedShare.toFixed(2)}</td>
+      <td class="r" style="color:var(--yellow);font-weight:700">₹${b.grand.toFixed(2)}</td>
+    </tr>`;
+  });
+  summaryHTML += `<tr class="row-grand">
+    <td>Combined Total</td><td class="r" colspan="3"></td>
+    <td class="r">₹${grandBillsTotal.toFixed(2)}</td>
+  </tr></tbody></table></div>`;
+
+  // ── Diff notice
+  let noticeHTML = '';
+  if (Math.abs(diff) > 0.05) {
+    noticeHTML = `<div class="notice">Individual progressive slabs produce a combined total of ₹${grandBillsTotal.toFixed(2)} vs the master bill of ₹${masterTotal.toFixed(2)} (difference: ₹${Math.abs(diff).toFixed(2)}). This is expected — each user benefits from cheap lower slabs independently. The difference can be split equally (₹${(diff / bills.length).toFixed(2)} per user) if exact reconciliation is needed.</div>`;
+  }
+
+  area.innerHTML = cardsHTML + masterHTML + noticeHTML + breakHTML + summaryHTML;
+}
+
+function toggleBreakdown(i) {
+  const body   = document.getElementById('break-' + i);
+  const header = body.previousElementSibling;
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+function reset() {
+  location.reload();
+}
+</script>
+</body>
+</html>
