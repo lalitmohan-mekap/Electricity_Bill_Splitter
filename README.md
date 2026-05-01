@@ -3,8 +3,8 @@
 **The fair way to split electricity bills across multiple users sharing a single meter.**
 
 
-[🚀 **Live Demo**](https://lalitmohan-mekap.github.io/Electric_Bill_Splitter)
-[![BillSplit Preview](preview.png)](https://lalitmohan-mekap.github.io/Electric_Bill_Splitter)
+[🚀 **Live Demo**](https://lalitmohan-mekap.github.io/Electricity_Bill_Splitter)
+[![BillSplit Preview](preview.png)](https://lalitmohan-mekap.github.io/Electricity_Bill_Splitter)
 
 ## 📖 Introduction
 
